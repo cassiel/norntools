@@ -75,7 +75,6 @@ local function setup_midi(callbacks)
     local count = 1
     for k, v in pairs(callbacks) do
         keys_to_ids[k] = count
-        ids_to_keys[count] = k
         params:add_option(k, v.name, vnames, count)
         params:set_action(
             k,

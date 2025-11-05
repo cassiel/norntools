@@ -72,17 +72,26 @@ local function setup_midi(callbacks)
             end
     end
 
-    local count = 1
-    for k, v in pairs(callbacks) do
-        keys_to_ids[k] = count
-        params:add_option(k, v.name, vnames, count)
+    --[[
+        When establishing the params we force alphabetical order.
+        We can't rely on the key order in callbacks anyway,
+        and we need consistency for our unit tests(!).
+    ]]
+    local keys = { }
+    for k, _ in pairs(callbacks) do
+        table.insert(keys, k)
+    end
+    table.sort(keys)
+
+    for i, k in ipairs(keys) do
+        keys_to_ids[k] = i
+        params:add_option(k, callbacks[k].name, vnames, i)
         params:set_action(
             k,
             function(n)
                 keys_to_ids[k] = n
             end
         )
-        count = count + 1
     end
 
     return keys_to_ids
@@ -90,7 +99,7 @@ end
 
 local function setup(header, callbacks)
     params:add_separator(header)
-    setup_midi(callbacks)
+    return setup_midi(callbacks)
 end
 
 return {

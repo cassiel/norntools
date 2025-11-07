@@ -31,9 +31,11 @@ function test_Endpoint:setUp()
         do a `midi.connect()` based on index.
     ]]
     midi.vports = { "...", "...", "..." }
+    midi.devices = { }
 
     function midi.connect(i)
-        return {name="midi.connected(" .. i .. ")"}
+        midi.devices[i] = midi.devices[i] or {name="midi.connected(" .. i .. ")"}
+        return midi.devices[i]
     end
 
     util = { }
@@ -56,13 +58,16 @@ function test_Endpoint:setUp()
 
     function params:set_action(id, callback)
         table.insert(log, "set_action " .. id)
+
+        self.actions = self.actions or { }
+        self.actions[id] = callback
     end
 end
 
 function test_Endpoint:tearDown()
 end
 
-function test_Endpoint:testGo()
+function test_Endpoint:testSetup()
     local result = midi_ports.setup("TestApp", {
         port_a = {
             name="Port A",
@@ -84,8 +89,10 @@ function test_Endpoint:testGo()
         }
     })
 
-    -- Here we're expecting user ports in order - we need to
-    -- do an ordering somewhere:
+    --[[
+        Here we're expecting user ports in order - we enforce
+        that when we scan.
+    ]]
     lu.assertEquals(
         self.log,
         {
@@ -99,6 +106,50 @@ function test_Endpoint:testGo()
         }
     )
     lu.assertEquals(result, {port_a=1, port_b=2, port_z=3})
+end
+
+function test_Endpoint:testParamChange()
+    local result = midi_ports.setup("TestApp", {
+                                        port_a = {
+                                            name="Port A",
+                                            event=function(x)
+                                                table.insert(self.log, "event.A")
+                                            end
+                                        }
+    })
+
+    local callback = params.actions.port_a
+    callback(99)
+
+    lu.assertEquals(result, {port_a=99})
+end
+
+function test_Endpoint:testEvent()
+    midi_ports.setup("TestApp", {
+                         port_a = {
+                             name="Port A",
+                             event=function(x)
+                                 table.insert(self.log, "event.A: " .. x)
+                             end
+                         }
+    })
+
+    -- Flip port_a to virtual slot 3:
+    params.actions.port_a(3)
+
+    dev = midi.connect(3)
+    dev.event("MIDI-IN")
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator TestApp",
+            'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
+            "set_action port_a",
+            "event.A: MIDI-IN"
+        }
+    )
+
 end
 
 runner = lu.LuaUnit.new()

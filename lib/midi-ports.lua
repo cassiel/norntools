@@ -60,7 +60,7 @@ local function setup_midi(callbacks)
         ]]
         devices[i].event =
             function (x)
-                print("PORT [" .. i .. "]")
+                -- print("PORT [" .. i .. "]")
                 -- This is a filter: we see input from all active ports,
                 -- but have to select according to our param. We're doing
                 -- it by index, not actual device:

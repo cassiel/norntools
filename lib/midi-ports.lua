@@ -25,8 +25,17 @@ local function setup_midi(callbacks)
         to swap other devices into this ports after the fact.
     ]]
 
-    -- Result: map from keys to vport indices (mutable!):
+    --[[
+        Result: map from keys to vport indices (mutable!):
+    ]]
     local keys_to_ids = { }
+
+    --[[
+        Similar: map keys directly to devices (we return this). There's
+        no intermediate processing here, like there needs to be with
+        event handers which would be much harder to dynamically patch.
+    ]]
+    local keys_to_devices = { }
 
     -- Arrays indexed by vport:
     local devices = { }
@@ -34,12 +43,12 @@ local function setup_midi(callbacks)
 
     for i = 1, #midi.vports do
         --[[
-            The connection here is to the device endpoint, unrelated
-            to the index i. The device can be reattached to another
-            vport and will still work at its different index. Devices
-            not connected at this time won't show up later.
+            The result of midi.connect() still seems to be related to
+            virtual slot: swap in a different "device" in system settings
+            and that new device kicks in.
         ]]
         devices[i] = midi.connect(i)
+
         --[[
             The trim is mainly for the parameter page. (Perhaps we should
             have a second table with longer names for the script page.)
@@ -54,16 +63,18 @@ local function setup_midi(callbacks)
         --[[
             Event handling: given an id, callback if a key maps to that id.
             Fiddly because we might have the same id as a target for multiple
-            ids (especially when manually configuring the script) so we
-            can't just maintain a reverse table. We do it the icky way and
-            iterate through the original.
+            keys (especially when manually configuring the script) so we
+            can't just maintain a reverse table. We do it by iterating
+            through the original.
         ]]
         devices[i].event =
             function (x)
                 -- print("PORT [" .. i .. "]")
-                -- This is a filter: we see input from all active ports,
-                -- but have to select according to our param. We're doing
-                -- it by index, not actual device:
+                --[[
+                    This is a filter: we see input from all active ports,
+                    but have to select according to our param. We may
+                    get multiple matches.
+                ]]
                 for key, id in pairs(keys_to_ids) do
                     if i == id then
                         callbacks[key].event(x)
@@ -85,16 +96,20 @@ local function setup_midi(callbacks)
 
     for i, k in ipairs(keys) do
         keys_to_ids[k] = i
+        keys_to_devices = devices[i]
         params:add_option(k, callbacks[k].name, vnames, i)
         params:set_action(
             k,
             function(n)
                 keys_to_ids[k] = n
+                keys_to_devices[k] = devices[n]
             end
         )
     end
 
-    return keys_to_ids
+    -- This one helps with unit tests(!):
+    keys_to_devices._ids = keys_to_ids
+    return keys_to_devices
 end
 
 local function setup(header, callbacks)

@@ -34,7 +34,13 @@ function test_Endpoint:setUp()
     midi.devices = { }
 
     function midi.connect(i)
-        midi.devices[i] = midi.devices[i] or {name="midi.connected(" .. i .. ")"}
+        midi.devices[i] =
+            midi.devices[i] or {
+                name="midi.connected(" .. i .. ")",
+                send=function (x)
+                    table.insert(log, "midi.send {" .. table.concat(x, ", ") .. "}")
+                end
+            }
         return midi.devices[i]
     end
 
@@ -105,7 +111,7 @@ function test_Endpoint:testSetup()
             "set_action port_z"
         }
     )
-    lu.assertEquals(result, {port_a=1, port_b=2, port_z=3})
+    lu.assertEquals(result._ids, {port_a=1, port_b=2, port_z=3})
 end
 
 function test_Endpoint:testParamChange()
@@ -121,7 +127,7 @@ function test_Endpoint:testParamChange()
     local callback = params.actions.port_a
     callback(99)
 
-    lu.assertEquals(result, {port_a=99})
+    lu.assertEquals(result._ids, {port_a=99})
 end
 
 function test_Endpoint:testEvent()
@@ -147,6 +153,36 @@ function test_Endpoint:testEvent()
             'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
             "set_action port_a",
             "event.A: MIDI-IN"
+        }
+    )
+end
+
+function test_Endpoint:testTransmit()
+    setup = midi_ports.setup(
+        "TestApp",
+        {
+            port_a = {
+                name="Port A",
+                event=function(x)
+                    table.insert(self.log, "UNEXPECTED")
+                end
+            }
+        }
+    )
+
+    -- Flip port_a to virtual slot 3:
+    params.actions.port_a(3)
+
+    dev = midi.connect(3)
+    setup.port_a.send{7, 8, 9}
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator TestApp",
+            'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
+            "set_action port_a",
+            "midi.send {7, 8, 9}"
         }
     )
 

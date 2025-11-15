@@ -96,7 +96,7 @@ local function setup_midi(callbacks)
 
     for i, k in ipairs(keys) do
         keys_to_ids[k] = i
-        keys_to_devices = devices[i]
+        keys_to_devices[k] = devices[i]
         params:add_option(k, callbacks[k].name, vnames, i)
         params:set_action(
             k,

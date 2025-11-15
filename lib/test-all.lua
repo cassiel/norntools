@@ -157,8 +157,36 @@ function test_Endpoint:testEvent()
     )
 end
 
-function test_Endpoint:testTransmit()
-    setup = midi_ports.setup(
+function test_Endpoint:testTransmitNoParamChange()
+    m = midi_ports.setup(
+        "TestApp",
+        {
+            port_a = {
+                name="Port A",
+                event=function(x)
+                    table.insert(self.log, "UNEXPECTED")
+                end
+            }
+        }
+    )
+
+    dev = midi.connect(1)
+    m.port_a.send{7, 8, 9}
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator TestApp",
+            'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
+            "set_action port_a",
+            "midi.send {7, 8, 9}"
+        }
+    )
+
+end
+
+function test_Endpoint:testTransmitWithParamChange()
+    m = midi_ports.setup(
         "TestApp",
         {
             port_a = {
@@ -174,7 +202,7 @@ function test_Endpoint:testTransmit()
     params.actions.port_a(3)
 
     dev = midi.connect(3)
-    setup.port_a.send{7, 8, 9}
+    m.port_a.send{7, 8, 9}
 
     lu.assertEquals(
         self.log,

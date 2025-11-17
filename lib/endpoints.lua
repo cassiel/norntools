@@ -22,7 +22,7 @@ local function setup_midi(callbacks)
     --[[
         Set up MIDI endpoints via virtual ports. We're building a map
         from application keys to virtual port indices; it's possible
-        to swap other devices into this ports after the fact.
+        to swap other devices into these ports after the fact.
     ]]
 
     --[[

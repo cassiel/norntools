@@ -53,16 +53,16 @@ end
 
 local config = {
     keys={
-        name="Keys in",
-        event=function(x) print("keys:"); tab.print(x); fire_led("keys") end
+        name="Keyboard",
+        event=function(_) fire_led("keys") end
     },
     pads={
-        name="Pads in",
-        event=function(x) print("pads:"); tab.print(x); fire_led("pads") end
+        name="Drum Pads",
+        event=function(_) fire_led("pads") end
     },
     knobs={
-        name="Knobs in",
-        event=function(x) print("knobs:"); tab.print(x); fire_led("knobs") end
+        name="Controller Box",
+        event=function(_) fire_led("knobs") end
     }
 }
 
@@ -75,6 +75,7 @@ function init()
     ]]
 
     endpoints = ports.setup_midi("Endpoints", config)
+    params:default()        --  Recall default setup.
 end
 
 local function sorted_keys(t)
